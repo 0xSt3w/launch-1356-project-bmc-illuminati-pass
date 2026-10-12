@@ -1,0 +1,33 @@
+
+name: BMC PASS - Foundry Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check Foundry version
+        run: forge --version
+
+      - name: Compile contracts
+        run: forge build
+
+      - name: Run Solidity tests
+        run: forge test -vvv
