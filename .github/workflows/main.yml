@@ -35,9 +35,9 @@ jobs:
 
       - name: Run Solidity tests
         run: forge test -vvv --no-match-contract 'BMCMainnetForkTest|BMCDeterministicMainnetForkTest'
+   
 
-      
-- name: Simulate deterministic Mainnet deployment
+      - name: Simulate deterministic Mainnet deployment
         env:
           MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
         run: |
