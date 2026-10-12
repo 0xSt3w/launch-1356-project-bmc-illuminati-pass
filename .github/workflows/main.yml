@@ -11,6 +11,7 @@ jobs:
   test:
     name: Build and Test
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
 
@@ -30,7 +31,7 @@ jobs:
         run: forge build
 
       - name: Run Solidity tests
-        run: forge test -vvv
+        run: forge test -vvv --no-match-contract BMCMainnetForkTest
 
       - name: Test real BMC on Ethereum fork
         env:
