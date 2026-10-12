@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import {Script} from "forge-std/Script.sol";
-import {BMCIlluminatiPassDeterministic} from "../src/experimental/BMCIlluminatiPassDeterministic.sol";
+import {BMCIlluminatiPassDeterministic} from "../src/BMCIlluminatiPassDeterministic.sol";
 
 /// @notice SIMULATION ONLY. No startBroadcast, private key, or network transaction.
 contract DeployBMCIlluminatiPassDeterministicDryRun is Script {
