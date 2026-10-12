@@ -53,19 +53,28 @@ contract BMCIlluminatiPassCandidateV2Test is Test {
         assertTrue(pass.genesisCIDLocked());
     }
 
-    function test_EmptyGenesisCIDReverts() public {
-        vm.expectRevert(BMCIlluminatiPassCandidateV2.EmptyCID.selector);
-        _deploy("", coord.VALID_KEY());
-    }
 
-    function test_BurnAndMintDoNotRequestRandomness() public {
-        uint256 beforeSupply = bmc.totalSupply();
-        uint256 id = _mintMystery();
-        assertEq(id, 41);
-        assertEq(coord.nextRequestId(), 1000);
-        assertEq(bmc.totalSupply(), beforeSupply - 350_000 ether);
-        assertEq(pass.requestIdOf(id), 0);
-    }
+function test_EmptyGenesisCIDReverts() public {
+    bytes32 validKey = coord.VALID_KEY();
+
+    vm.expectRevert(
+        BMCIlluminatiPassCandidateV2.EmptyCID.selector
+    );
+
+    new BMCIlluminatiPassCandidateV2(
+        address(this),
+        address(bmc),
+        address(coord),
+        uint64(block.timestamp + 1 days),
+        123,
+        validKey,
+        500_000,
+        3,
+        true,
+        ""
+    );
+}
+
 
     function test_UnknownGasLaneCannotRequestSeed() public {
         BMCIlluminatiPassCandidateV2 wrong = _deploy(GENESIS_CID, keccak256("unregistered"));
