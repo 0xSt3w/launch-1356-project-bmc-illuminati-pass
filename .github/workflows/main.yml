@@ -31,3 +31,12 @@ jobs:
 
       - name: Run Solidity tests
         run: forge test -vvv
+
+      - name: Test real BMC on Ethereum fork
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+        run: |
+          forge test \
+            --match-contract BMCMainnetForkTest \
+            --fork-url "$MAINNET_RPC_URL" \
+            -vvv
