@@ -5,8 +5,9 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {IBMCToken} from "../interfaces/IBMCToken.sol";
-import {StandardArt} from "../StandardArt.sol";
+
+import {IBMCToken} from "./interfaces/IBMCToken.sol";
+import {StandardArt} from "./StandardArt.sol";
 
 /// @title BMC Illuminati Pass — deterministic allocation candidate
 /// @notice No randomness, oracle, or reveal stage. Artwork is fixed by token ID.
