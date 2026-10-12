@@ -1,4 +1,51 @@
 
+name: BMC PASS - Foundry Tests
+
+on:
+  push:
+    branches:
+      - main
+      - security/vrf-recovery
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check Foundry version
+        run: forge --version
+
+      - name: Compile contracts and check sizes
+        run: forge build --sizes
+
+      - name: Run Solidity tests
+        run: forge test -vvv --no-match-contract BMCMainnetForkTest
+
+      - name: Test real BMC on Ethereum fork
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+        run: |
+          if [ -z "$MAINNET_RPC_URL" ]; then
+            echo "No Mainnet RPC configured; skipping fork test."
+            exit 0
+          fi
+          forge test --match-contract BMCMainnetForkTest \
+            --fork-url "$MAINNET_RPC_URL" -vvv
+
       - name: Simulate BMC PASS V3 deployment (no broadcast)
         env:
           MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
