@@ -30,9 +30,8 @@ jobs:
 
       - name: Check Foundry version
         run: forge --version
-
       - name: Compile contracts
-        run: forge build
+        run: forge build --sizes
 
       - name: Run Solidity tests
         run: forge test -vvv --no-match-contract BMCMainnetForkTest
