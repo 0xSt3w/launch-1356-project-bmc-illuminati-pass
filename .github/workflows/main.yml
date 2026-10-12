@@ -3,7 +3,9 @@ name: BMC PASS - Foundry Tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - security/vrf-recovery
   pull_request:
   workflow_dispatch:
 
