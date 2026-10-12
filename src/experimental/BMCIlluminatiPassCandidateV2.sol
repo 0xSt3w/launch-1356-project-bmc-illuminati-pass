@@ -11,7 +11,7 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
 import {IBMCToken} from "../interfaces/IBMCToken.sol";
 import {StandardArt} from "../StandardArt.sol";
 
-/// @dev EXPERIMENTAL CANDIDATE - NOT FOR DEPLOYMENT.
+/// @dev EXPERIMENTAL V2 CANDIDATE - NOT FOR DEPLOYMENT. VRF retry fairness remains unresolved.
 /// @title BMC Illuminati Pass
 /// @notice 500-piece ERC-721 collection minted by permanently burning BMC through `burnFrom`.
 ///
@@ -23,12 +23,9 @@ import {StandardArt} from "../StandardArt.sol";
 ///  Permissionless finalization draws without replacement from 37 Genesis and 423 Standard.
 ///
 ///  Trust model / privileged powers (see README "Operational responsibilities"):
-///   - Owner can set the Genesis images CID exactly once, before any mint. No mint is possible
-///     until it is set. After that it is immutable.
-///   - Owner can update the Chainlink VRF request configuration (subscription id, key hash, callback
-///     gas, confirmations, payment mode). This can only affect *future* requests, never a stored or
-///     finalized outcome. The coordinator address is immutable. The owner cannot mint, reroll, assign
-///     artwork, change prices or metadata, withdraw anything, or upgrade the contract.
+///   - Genesis images CID is supplied and locked in the constructor; no post-deployment setter.
+///   - VRF request configuration is fixed in the constructor. The coordinator is immutable.
+///     The owner cannot mint, assign artwork, change prices, withdraw, or upgrade.
 ///   - The VRF subscription itself is administered on the Chainlink coordinator by its subscription
 ///     owner (adding this contract as a consumer, funding it). Anyone can fund a subscription.
 ///
@@ -36,7 +33,7 @@ import {StandardArt} from "../StandardArt.sol";
 ///  fulfilled by the coordinator. There is no reroll, no re-request and no fallback randomness.
 ///  Requests may expire off-chain; this candidate supports timed retries, but selective
 ///  delivery of overlapping requests remains a security risk requiring independent review.
-contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
+contract BMCIlluminatiPassCandidateV2 is ERC721, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
     // ------------------------------------------------------------------------------------------
@@ -111,7 +108,7 @@ contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
     uint256 public mysteryGenesisRevealed;
 
     string public genesisImagesCID;
-    bool public genesisCIDLocked;
+    bool public genesisCIDLocked; // Always true after successful construction
 
     VRFConfig public vrfConfig; // Fixed at construction in this candidate
 
@@ -178,9 +175,10 @@ contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
     // Constructor
     // ------------------------------------------------------------------------------------------
 
-    /// @param initialOwner Owner able to set the images CID (once) and the VRF request config.
+    /// @param initialOwner Initial owner (no post-deployment CID or VRF setter).
     /// @param bmcToken The BMC token (mainnet 0x38224239f2BDae357D47cb864BC533d7f72dF961).
     /// @param vrfCoordinator Chainlink VRF v2.5 coordinator (mainnet 0xD7f86b4b8Cae7D942340FF628F82735b7a20893a).
+    /// @param initialGenesisCID Bare IPFS directory CID containing genesis-01.png through genesis-77.png.
     constructor(
         address initialOwner,
         address bmcToken,
@@ -190,7 +188,8 @@ contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
         bytes32 keyHash,
         uint32 callbackGasLimit,
         uint16 requestConfirmations,
-        bool nativePayment
+        bool nativePayment,
+        string memory initialGenesisCID
     ) ERC721("BMC Illuminati Pass", "BMCPASS") Ownable(initialOwner) {
         require(bmcToken != address(0) && vrfCoordinator != address(0), "zero address");
         require(closingTime > block.timestamp, "deadline must be future");
@@ -199,20 +198,14 @@ contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
                 || callbackGasLimit > MAX_CALLBACK_GAS_LIMIT || requestConfirmations < MIN_REQUEST_CONFIRMATIONS
                 || requestConfirmations > MAX_REQUEST_CONFIRMATIONS
         ) revert InvalidVRFConfig();
+        if (bytes(initialGenesisCID).length == 0) revert EmptyCID();
+        genesisImagesCID = initialGenesisCID;
+        genesisCIDLocked = true;
+        emit GenesisImagesCIDSet(initialGenesisCID);
         saleDeadline = closingTime;
         BMC = IBMCToken(bmcToken);
         VRF_COORDINATOR = IVRFCoordinatorV2Plus(vrfCoordinator);
         vrfConfig = VRFConfig(subscriptionId, keyHash, callbackGasLimit, requestConfirmations, nativePayment, true);
-    }
-
-    /// @dev Still a post-deployment initializer: NOT acceptable for final production deployment.
-    function setGenesisImagesCID(string calldata cid) external onlyOwner {
-        if (genesisCIDLocked) revert GenesisCIDAlreadySet();
-        if (totalMinted != 0) revert GenesisCIDAlreadySet();
-        if (bytes(cid).length == 0) revert EmptyCID();
-        genesisImagesCID = cid;
-        genesisCIDLocked = true;
-        emit GenesisImagesCIDSet(cid);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -259,7 +252,7 @@ contract BMCIlluminatiPassCandidate is ERC721, Ownable, ReentrancyGuard {
     }
 
     /// @notice Anyone can request the global seed after sale close.
-    /// @dev First delivered word wins; retry after 7 days, even if an earlier request is outstanding.
+    /// @dev SECURITY WARNING: overlapping retries allow first-delivered selection; not production-safe.
     function requestSeed() external returns (uint256 requestId) {
         if (!saleClosed) closeSale();
         require(!seedReceived, "seed already received");
