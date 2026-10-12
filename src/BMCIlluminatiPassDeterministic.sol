@@ -226,19 +226,22 @@ contract BMCIlluminatiPassDeterministic is ERC721, ReentrancyGuard {
     // ------------------------------------------------------------------------------------------
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        _requireMinted(tokenId);
-        Tier tier = _tier[tokenId];
-        string memory json;
-        if (tier == Tier.Pending) {
-            json = _pendingJson(tokenId);
-        } else if (tier == Tier.Standard) {
-            json = _standardJson(tokenId, _artworkId[tokenId]);
-        } else {
-            json = _genesisJson(tokenId, tier, _artworkId[tokenId]);
-        }
-        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
+    _requireMinted(tokenId);
+
+    Tier tier = _tier[tokenId];
+    string memory json;
+
+    if (tier == Tier.Standard) {
+        json = _standardJson(tokenId, _artworkId[tokenId]);
+    } else {
+        json = _genesisJson(tokenId, tier, _artworkId[tokenId]);
     }
 
+    return string.concat(
+        "data:application/json;base64,",
+        Base64.encode(bytes(json))
+    );
+}
     /// @notice Raw SVG of a Standard token (reverts for other tiers).
     function standardSVG(uint256 tokenId) external view returns (string memory) {
         _requireMinted(tokenId);
